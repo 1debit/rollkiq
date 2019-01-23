@@ -1,6 +1,5 @@
 require "rollkiq/version"
+require "rollkiq/plugin"
 
 module Rollkiq
-  class Error < StandardError; end
-  # Your code goes here...
 end

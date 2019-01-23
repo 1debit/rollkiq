@@ -1,8 +1,6 @@
 # Rollkiq
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/rollkiq`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Rollkiq allows customization for Rollbar exceptions for Sidekiq failures.
 
 ## Installation
 
@@ -22,7 +20,19 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+Inside your worker set the notifiy_on_retry_number method to set the retries that should send an exception to rollbar you can pass an integer or an array of integers.
+
+```ruby
+class FakeWorker
+  include Sidekiq::Worker
+
+  def notifiy_on_retry_number
+    5
+    # OR
+    [5, 10]
+  end
+end
+```
 
 ## Development
 
