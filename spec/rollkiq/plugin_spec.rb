@@ -21,6 +21,9 @@ RSpec.describe Rollbar::Sidekiq do
 
     context '#notifiy_on_retry_number' do
       let(:class_name) { 'FakeWorker' }
+      let(:fake_worker_class) {
+        double('FakeWorkerClass', new: fake_worker)
+      }
       let(:fake_worker) {
         double('FakeWorker', notifiy_on_retry_number: notifiy_on_retry_number)
       }
@@ -32,7 +35,7 @@ RSpec.describe Rollbar::Sidekiq do
           :const_get
         ).with(
           job_hash['class']
-        ).and_return(fake_worker)
+        ).and_return(fake_worker_class)
       end
 
       context 'when not implemented' do

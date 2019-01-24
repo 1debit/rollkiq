@@ -37,11 +37,11 @@ module Rollbar
     end
 
     def notifiy_on_retry_number
-      @notifiy_on_retry_number ||= worker_class.notifiy_on_retry_number rescue nil
+      @notifiy_on_retry_number ||= worker_instance.notifiy_on_retry_number rescue nil
     end
 
-    def worker_class
-      self.class.const_get(job_hash['class']) rescue nil
+    def worker_instance
+      self.class.const_get(job_hash['class']).new rescue nil
     end
 
     def global_threshold
