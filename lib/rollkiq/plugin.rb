@@ -4,24 +4,87 @@ module Rollbar
   class Sidekiq
     attr_reader :job_hash, :error
 
-    def initialize(job_hash, error)
-      @job_hash = job_hash
+    def initialize(ctx_hash, error)
+      @ctx_hash = ctx_hash
+      @job_hash = ctx_hash.fetch(:job, nil)
       @error = error
     end
 
-    def self.skip_report?(job_hash, error)
-      return false if job_hash.nil?
-
-      new(job_hash, error).skip_report?
+    def self.handle_exception(ctx_hash, error)
+      new(ctx_hash, error).handle_exception
     end
 
-    def skip_report?
-      return false unless job_hash['retry']
+    def handle_exception
+      return if skip_report?
 
-      notifiy_on_retry_number.nil? ? skip_globally? : skip_override?
+      Rollbar.scope(scope).error(error, use_exception_level_filters: true)
     end
 
     private
+
+    def skip_report?
+      return false if job_hash.nil?
+      return false unless job_hash['retry']
+
+      notify_on_failure_number.nil? ? skip_globally? : skip_override?
+    end
+
+    def scope
+      {
+        framework: "Sidekiq: #{::Sidekiq::VERSION}",
+        context: job_hash&.fetch('class', nil),
+        queue: job_hash&.fetch('queue', nil),
+        request: request_scope,
+        person: person_scope
+      }
+    end
+
+    def request_scope
+      {
+        params: sanitized_params
+      }
+    end
+
+    def sanitized_params
+      scrub_params(non_blacklisted_params)
+    end
+
+    def scrub_params(params)
+      options = {
+        params: params,
+        config: Rollbar.configuration.scrub_fields
+      }
+
+      Rollbar::Scrubbers::Params.call(options)
+    end
+
+    def non_blacklisted_params
+      job_hash&.reject { |key| PARAM_BLACKLIST.include?(key) }
+    end
+
+    def person_scope
+      {
+        id: person_id,
+        email: person_email,
+        username: person_username
+      }
+    end
+
+    def person_id
+      person.id rescue nil
+    end
+
+    def person_email
+      person.email rescue nil
+    end
+
+    def person_username
+      person.username rescue nil
+    end
+
+    def person
+      worker_instance.person(*job_hash['args']) rescue nil
+    end
 
     def skip_globally?
       retry_count < global_threshold
@@ -29,15 +92,15 @@ module Rollbar
 
     def skip_override?
       case
-      when notifiy_on_retry_number.is_a?(Integer)
-        notifiy_on_retry_number != retry_count
-      when notifiy_on_retry_number.is_a?(Array)
-        !notifiy_on_retry_number.include?(retry_count)
+      when notify_on_failure_number.is_a?(Integer)
+        notify_on_failure_number != retry_count
+      when notify_on_failure_number.is_a?(Array)
+        !notify_on_failure_number.include?(retry_count)
       end
     end
 
-    def notifiy_on_retry_number
-      @notifiy_on_retry_number ||= worker_instance.notifiy_on_retry_number rescue nil
+    def notify_on_failure_number
+      @notify_on_failure_number ||= worker_instance.notify_on_failure_number rescue nil
     end
 
     def worker_instance
@@ -45,7 +108,7 @@ module Rollbar
     end
 
     def global_threshold
-      ::Rollbar.configuration.sidekiq_threshold.to_i
+      Rollbar.configuration.sidekiq_threshold.to_i
     end
 
     def retry_count
