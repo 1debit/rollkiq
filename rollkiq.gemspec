@@ -23,8 +23,8 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "rollbar"
-  spec.add_dependency "sidekiq"
+  spec.add_dependency "rollbar", "~> 2.18"
+  spec.add_dependency "sidekiq", "~> 5.2"
 
   spec.add_development_dependency "bundler", "~> 1.17"
   spec.add_development_dependency "rake", "~> 10.0"

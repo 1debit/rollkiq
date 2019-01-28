@@ -2,8 +2,8 @@ PATH
   remote: .
   specs:
     rollkiq (0.1.0)
-      rollbar
-      sidekiq
+      rollbar (~> 2.18)
+      sidekiq (~> 5.2)
 
 GEM
   remote: https://rubygems.org/
